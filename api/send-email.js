@@ -1,6 +1,17 @@
 const { Resend } = require('resend');
 
-export default async function handler(req, res) {
+function escapeHtml(text) {
+  const map = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;',
+  };
+  return text.replace(/[&<>"']/g, (m) => map[m]);
+}
+
+module.exports = async function handler(req, res) {
   // Set CORS headers
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -26,12 +37,12 @@ export default async function handler(req, res) {
   // Check for API key
   if (!process.env.RESEND_API_KEY) {
     console.error('RESEND_API_KEY is not set');
-    return res.status(500).json({ error: 'Server configuration error' });
+    return res.status(500).json({ error: 'Server configuration error: Missing RESEND_API_KEY' });
   }
 
   if (!process.env.RESEND_TO_EMAIL) {
     console.error('RESEND_TO_EMAIL is not set');
-    return res.status(500).json({ error: 'Server configuration error' });
+    return res.status(500).json({ error: 'Server configuration error: Missing RESEND_TO_EMAIL' });
   }
 
   try {
@@ -61,15 +72,4 @@ export default async function handler(req, res) {
     console.error('Server error:', error.message);
     return res.status(500).json({ error: 'Internal server error', details: error.message });
   }
-}
-
-function escapeHtml(text) {
-  const map = {
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#039;',
-  };
-  return text.replace(/[&<>"']/g, (m) => map[m]);
-}
+};
