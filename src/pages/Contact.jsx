@@ -38,7 +38,16 @@ export default function Contact(){
         }),
       })
 
-      const data = await response.json()
+      let data;
+      const contentType = response.headers.get('content-type');
+      
+      if (contentType && contentType.includes('application/json')) {
+        data = await response.json();
+      } else {
+        const text = await response.text();
+        data = { error: 'Server error: Invalid response format' };
+        console.error('Non-JSON response:', text);
+      }
 
       if (response.ok) {
         setSubmitted(true)
@@ -49,11 +58,12 @@ export default function Contact(){
           setAlertMessage({ type: '', text: '' })
         }, 3000)
       } else {
-        setAlertMessage({ type: 'error', text: data.error || '✗ Failed to send email. Please try again.' })
+        const errorMsg = data.error || data.details || '✗ Failed to send email. Please try again.'
+        setAlertMessage({ type: 'error', text: errorMsg })
       }
     } catch (error) {
       console.error('Email send error:', error)
-      setAlertMessage({ type: 'error', text: '✗ Failed to send email. Please try again.' })
+      setAlertMessage({ type: 'error', text: '✗ Network error: Failed to send email. Please try again.' })
     } finally {
       setLoading(false)
     }

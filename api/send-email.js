@@ -1,8 +1,17 @@
-import { Resend } from 'resend';
-
-const resend = new Resend(process.env.RESEND_API_KEY);
+const { Resend } = require('resend');
 
 export default async function handler(req, res) {
+  // Set CORS headers
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+  res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
+
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -14,7 +23,20 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Missing required fields' });
   }
 
+  // Check for API key
+  if (!process.env.RESEND_API_KEY) {
+    console.error('RESEND_API_KEY is not set');
+    return res.status(500).json({ error: 'Server configuration error' });
+  }
+
+  if (!process.env.RESEND_TO_EMAIL) {
+    console.error('RESEND_TO_EMAIL is not set');
+    return res.status(500).json({ error: 'Server configuration error' });
+  }
+
   try {
+    const resend = new Resend(process.env.RESEND_API_KEY);
+    
     const data = await resend.emails.send({
       from: process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev',
       to: process.env.RESEND_TO_EMAIL,
@@ -31,13 +53,13 @@ export default async function handler(req, res) {
 
     if (data.error) {
       console.error('Resend error:', data.error);
-      return res.status(400).json({ error: 'Failed to send email' });
+      return res.status(400).json({ error: 'Failed to send email', details: data.error });
     }
 
     return res.status(200).json({ success: true, id: data.data.id });
   } catch (error) {
-    console.error('Server error:', error);
-    return res.status(500).json({ error: 'Internal server error' });
+    console.error('Server error:', error.message);
+    return res.status(500).json({ error: 'Internal server error', details: error.message });
   }
 }
 
